@@ -27,10 +27,11 @@ function apiAddLabNode($lab, $p, $o) {
 
 	// Adding the node
 	$rc = $lab -> addNode($p);
-	if ($rc === 0) {
+	if ($rc < 20000) {
 		$output['code'] = 201;
 		$output['status'] = 'success';
 		$output['message'] = $GLOBALS['messages'][60023];
+		$output['NodeID'] = $rc;
 	} else {
 		$output['code'] = 400;
 		$output['status'] = 'fail';
@@ -232,6 +233,14 @@ function apiGetLabNode($lab, $id) {
 			if ( $node -> getTemplate() == "bigip" )  {
 				$output['data']['firstmac'] = $node -> getFirstMac();
 			}
+			if ( $node -> getTemplate() == "timoscpm" )  {
+				$output['data']['qemu_options'] = $node -> getQemu_options();
+				$output['data']['timos_line'] = $node -> getTimos_Line(); #TimosLine
+			}
+			if ( $node -> getTemplate() == "timosiom" )  {
+				$output['data']['qemu_options'] = $node -> getQemu_options();
+				$output['data']['timos_line'] = $node -> getTimos_Line(); #TimosLine
+			}
 		}
 
 		if ($node -> getNType() == 'docker') {
@@ -306,6 +315,14 @@ function apiGetLabNodes($lab) {
 				$output['data'][$node_id]['uuid'] = $node -> getUuid();
 				if ( $node -> getTemplate() == "bigip" ) {
 					$output['data'][$node_id]['firstmac'] = $node -> getFirstMac();
+				}
+				if ( $node -> getTemplate() == "timoscpm" ) {
+					$output['data'][$node_id]['qemu_options'] = $node -> getQemu_options();
+					$output['data'][$node_id]['timos_line'] = $node -> getTimos_Line(); #TimosLine
+				}
+				if ( $node -> getTemplate() == "timosiom" ) {
+					$output['data'][$node_id]['qemu_options'] = $node -> getQemu_options();
+					$output['data'][$node_id]['timos_line'] = $node -> getTimos_Line(); #TimosLine
 				}
 			}
 
@@ -512,7 +529,36 @@ function apiGetLabNodeTemplate($p) {
                 'type' => 'input',
                 'value' => ( isset($p['firstmac'])?$p['firstmac']:"") 
         );
+		
+	// Qemu Options
+        if ($p['template'] == "timoscpm" ) {
+			$output['data']['options']['qemu_options'] =  Array(
+                'name' => $GLOBALS['messages'][70022],
+                'type' => 'input',
+                'value' => ( isset($p['qemu_options'])?$p['qemu_options']:"") 
+			);
+			// Qemu Options #TimosLine
+			$output['data']['options']['timos_line'] =  Array(
+                'name' => $GLOBALS['messages'][70023],
+                'type' => 'input',
+                'value' => ( isset($p['timos_line'])?$p['timos_line']:"") 
+			);			
+		}
 
+	// Qemu Options
+        if ($p['template'] == "timosiom" ) {
+			$output['data']['options']['qemu_options'] =  Array(
+                'name' => $GLOBALS['messages'][70022],
+                'type' => 'input',
+                'value' => ( isset($p['qemu_options'])?$p['qemu_options']:"") 
+			);
+			// Qemu Options #TimosLine
+			$output['data']['options']['timos_line'] =  Array(
+                'name' => $GLOBALS['messages'][70023],
+                'type' => 'input',
+                'value' => ( isset($p['timos_line'])?$p['timos_line']:"") 
+			);	
+		}		
 	// Serial
 	if ($p['type'] == 'iol') $output['data']['options']['serial'] = Array(
 		'name' => $GLOBALS['messages'][70017],
@@ -521,7 +567,7 @@ function apiGetLabNodeTemplate($p) {
 	);
 
 	// Startup configs
-	if (in_array($p['type'], Array('dynamips', 'iol', 'qemu', 'docker','vpcs'))) {
+	if (in_array($p['type'], Array('dynamips', 'iol', 'qemu', 'docker','vpcs')) && !in_array($p['template'], Array('timos', 'timoscpm', 'timosiom'))) {
 		$output['data']['options']['config'] = Array(
 			'name' => $GLOBALS['messages'][70013],
 			'type' => 'list',
@@ -531,7 +577,15 @@ function apiGetLabNodeTemplate($p) {
 		$output['data']['options']['config']['list'][0] = $GLOBALS['messages'][70020];	// None
 		$output['data']['options']['config']['list'][1] = $GLOBALS['messages'][70019];	// Exported
 	}
-
+	// Startup configs - timos
+	if (in_array($p['template'], Array('timos', 'timoscpm'))) {
+		$output['data']['options']['timos_config'] = Array(
+			'name' => $GLOBALS['messages'][70013],
+			'type' => 'input',
+            'inputtype' => 'file',
+			'value' => 'burası'	// None			
+		);
+	}
 	// Delay
 	$output['data']['options']['delay'] = Array(
 		'name' => $GLOBALS['messages'][70014],
@@ -562,7 +616,11 @@ function apiGetLabNodeTemplate($p) {
 		if (isset($p['qemu_version'])) $output['data']['qemu']['version'] = $p['qemu_version'];
 		if (isset($p['qemu_nic'])) $output['data']['qemu']['nic'] = $p['qemu_nic'];
 		if (isset($p['qemu_options'])) $output['data']['qemu']['options'] = $p['qemu_options'];
+		if (isset($p['qemu_options'])) $output['data']['qemu_options'] = $p['qemu_options'];
 	}
+	
+
+		
 	return $output;
 }
 

@@ -73,7 +73,7 @@ function addMessage(severity, message, notFromLabviewport) {
 
 // Add Modal
 function addModal(title, body, footer, prop) {
-    var html = '<div aria-hidden="false" style="display: block;z-index: 10000;" class="modal ' + ' ' + prop + ' fade in" tabindex="-1" role="dialog"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title">' + title + '</h4></div><div class="modal-body">' + body + '</div><div class="modal-footer">' + footer + '</div></div></div></div>';
+    var html = '<div aria-hidden="false" style="display: block;z-index: 10000;" class="modal ' + ' ' + prop + ' in" tabindex="-1" role="dialog"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title">' + title + '</h4></div><div class="modal-body">' + body + '</div><div class="modal-footer">' + footer + '</div></div></div></div>';
     $('body').append(html);
     $('body > .modal').modal('show');
 }
@@ -533,6 +533,67 @@ function getLabInfo(lab_filename) {
             if (data['status'] == 'success') {
                 logger(1, 'DEBUG: lab "' + lab_filename + '" found.');
                 deferred.resolve(data['data']);
+            } else {
+                // Application error
+                logger(1, 'DEBUG: application error (' + data['status'] + ') on ' + type + ' ' + url + ' (' + data['message'] + ').');
+                deferred.reject(data['message']);
+            }
+        },
+        error: function (data) {
+            // Server error
+            var message = getJsonMessage(data['responseText']);
+            logger(1, 'DEBUG: server error (' + data['status'] + ') on ' + type + ' ' + url + '.');
+            logger(1, 'DEBUG: ' + message);
+            deferred.reject(message);
+        }
+    });
+    return deferred.promise();
+}
+
+// Get lab State
+function getLabState(lab_filename) {
+    var deferred = $.Deferred();
+    var url = '/api/labs' + lab_filename + '/state';
+    var type = 'GET';
+    $.ajax({
+        timeout: TIMEOUT,
+        type: type,
+        url: encodeURI(url),
+        dataType: 'json',
+        success: function (data) {
+            if (data['status'] == 'success') {
+                deferred.resolve(data['state']);
+            } else {
+                // Application error
+                logger(1, 'DEBUG: application error (' + data['status'] + ') on ' + type + ' ' + url + ' (' + data['message'] + ').');
+                deferred.reject(data['message']);
+            }
+        },
+        error: function (data) {
+            // Server error
+            var message = getJsonMessage(data['responseText']);
+            logger(1, 'DEBUG: server error (' + data['status'] + ') on ' + type + ' ' + url + '.');
+            logger(1, 'DEBUG: ' + message);
+            deferred.reject(message);
+        }
+    });
+    return deferred.promise();
+}
+
+// Unlock the Lab
+function UnlockLab(lab_filename) {
+	console.log(lab_filename);
+    var deferred = $.Deferred();
+    var url = '/api/labs' + lab_filename + '/Unlock';
+    var type = 'POST';
+    $.ajax({
+        timeout: TIMEOUT,
+        type: type,
+        url: encodeURI(url),
+        dataType: 'json',
+        success: function (data) {
+            if (data['status'] == 'success') {
+                deferred.resolve(data['state']);
             } else {
                 // Application error
                 logger(1, 'DEBUG: application error (' + data['status'] + ') on ' + type + ' ' + url + ' (' + data['message'] + ').');
@@ -1222,6 +1283,18 @@ function postLogin(param) {
 
 
         printPageLabOpen(LAB);
+		$.when(getLabState(LAB)).done(function (state) {
+			if (state ==true) {
+				var ClearLock=confirm('Lab is locked! Do you want to unlock?');
+				if (ClearLock) {
+					$.when(UnlockLab(LAB)).done(function (state) {
+						console.log('Lab unlocked: ' + state)
+					});
+
+				}			
+			} 			
+		});
+		
 
         // Update node status
         UPDATEID = setInterval('printLabStatus("' + LAB + '")', STATUSINTERVAL);
@@ -1862,6 +1935,21 @@ function printFormNetwork(action, values) {
 }
 
 // Node form
+function printFormMassImport() {
+	var left = null;
+	var top = null;
+	var title = MESSAGES[165];
+	var html = '';
+	html += '<form id="form-node-massimport" class="form-horizontal"><div class="form-group"><label class="col-md-4 control-label">' + MESSAGES[166];
+	html += '</label><div class="col-md-5"><input type="file" id="form-config-select" class="form-control" name="input-massimport" multiple></input>';
+	html += '</div></div><div id="form-node-data"></div><div id="form-massimport-validation" class="has-error"></div><div id="form-node-buttons">';
+	html += '<div class="form-group"><div class="col-md-6 col-md-offset-3"><button type="submit" class="btn btn-aqua">' + MESSAGES[47] + '</button> <button type="button" class="btn btn-grey" data-dismiss="modal">' + MESSAGES[18] + '</button></div>';
+	html += '</div></form>';	
+	addModal(title, html, '', 'second-win');
+	validateMassUpload();
+	
+}
+// Node form
 function printFormNode(action, values) {
     var id = (values == null || values['id'] == null) ? null : values['id'];
     var left = (values == null || values['left'] == null) ? null : values['left'];
@@ -1913,8 +2001,12 @@ function printFormNode(action, values) {
                             html_data += '</select></div>';
                             html_data += '</div>';
                         } else {
-                            // Option is standard
-                            html_data += '<div class="form-group"><label class="col-md-3 control-label">' + value['name'] + '</label><div class="col-md-5"><input class="form-control' + ((key == 'name') ? ' autofocus' : '') + '" name="node[' + key + ']" value="' + value_set + '" type="text"/></div></div>';
+							if (value['inputtype']) {
+								html_data += '<div class="form-group"><label class="col-md-3 control-label">' + value['name'] + '</label><div class="col-md-5"><input class="form-control' + ((key == 'name') ? ' autofocus' : '') + '" name="node[' + key + ']" value="' + value_set + '" type="'+ value['inputtype'] +'"/></div></div>';
+							} else{
+								// Option is standard
+								html_data += '<div class="form-group"><label class="col-md-3 control-label">' + value['name'] + '</label><div class="col-md-5"><input class="form-control' + ((key == 'name') ? ' autofocus' : '') + '" name="node[' + key + ']" value="' + value_set + '" type="text"/></div></div>';
+							}
                         }
                     });
                     html_data += '<div class="form-group"><label class="col-md-3 control-label">' + MESSAGES[93] + '</label><div class="col-md-5"><input class="form-control" name="node[left]" value="' + left + '" type="text"/></div></div><div class="form-group"><label class="col-md-3 control-label">' + MESSAGES[94] + '</label><div class="col-md-5"><input class="form-control" name="node[top]" value="' + top + '" type="text"/></div></div>';
@@ -3227,9 +3319,8 @@ function printPageLabOpen(lab) {
     $('#lab-sidebar ul a').each(function () {
         var t = $(this).attr("title");
         $(this).append(t);
-
-
     })
+	
 }
 
 // Print user management section

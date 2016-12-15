@@ -5,11 +5,28 @@
  *
  * User's input validation scripts
  *
+ * LICENSE:
+ *
+ * This file is part of UNetLab (Unified Networking Lab).
+ *
+ * UNetLab is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * UNetLab is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with UNetLab.  If not, see <http://www.gnu.org/licenses/>.
+ *
  * @author Andrea Dainese <andrea.dainese@gmail.com>
  * @copyright 2014-2016 Andrea Dainese
- * @license BSD-3-Clause https://github.com/dainok/unetlab/blob/master/LICENSE
+ * @license http://www.gnu.org/licenses/gpl.html
  * @link http://www.unetlab.com/
- * @version 20160719
+ * @version 20151223
  */
 
 $.validator.setDefaults({
@@ -113,6 +130,15 @@ function validateUser() {
 	});
 }
 
+function validateMassUpload() {
+	$('#form-node-massimport').validate({
+		rules: {
+			'input-massimport': {
+				required: true
+			}
+		}
+	});		
+}
 // Validate node form
 function validateNode() {
 	$('#form-node-add, #form-node-edit').validate({

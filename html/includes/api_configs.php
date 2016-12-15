@@ -151,4 +151,20 @@ function apiGetLabConfigs($lab) {
 	}
 	return $output;
 }
+
+
+function apiAddTimosConfig2Node($lab, $p, $Nodeid) {
+	// Adding TimosConfig
+	$rc = $lab -> AddTimosConfig2Node($p, $Nodeid);
+	if ($rc === 0) {
+		$output['code'] = 201;
+		$output['status'] = 'success';
+		$output['message'] = $GLOBALS['messages'][60023];
+	} else {
+		$output['code'] = 400;
+		$output['status'] = 'fail';
+		$output['message'] = $GLOBALS['messages'][$rc];
+    }
+	return $output;
+}
 ?>

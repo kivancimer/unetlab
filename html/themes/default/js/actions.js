@@ -432,12 +432,18 @@ $(document).on('click', '.action-configsget', function (e) {
     logger(1, 'DEBUG: action = configsget');
     $.when(getNodeConfigs(null)).done(function (configs) {
         var body = '<div class="row"><div class="config-list col-md-2 col-lg-2"><ul>';
+		body += '<li><a class="action-configdownloadall" data-path="' + 'key' + '" href="javascript:void(0)">Download All Configs ';
+		body += ' <i class="glyphicon glyphicon-download-alt"></i>';
+		body += '</a></li>';
         $.each(configs, function (key, config) {
             var title = (config['config'] == 0) ? MESSAGES[122] : MESSAGES[121];
             body += '<li><a class="action-configget" data-path="' + key + '" href="javascript:void(0)" title="' + title + '">' + config['name'];
             if (config['config'] == 1) {
                 body += ' <i class="glyphicon glyphicon-floppy-saved"></i>';
             }
+			body += '</a>';
+			body += '<a class="action-configdownload" data-path="' + key + '" href="javascript:void(0)" title="' + title + '">';
+			body += ' <i class="glyphicon glyphicon-download-alt"></i>';
             body += '</a></li>';
         });
         body += '</ul></div><div id="config-data" class="col-md-10 col-lg-10"></div></div>';
@@ -470,6 +476,49 @@ $(document).on('click', '.action-configget', function (e) {
     }).fail(function (message) {
         addModalError(message);
     });
+    $('#context-menu').remove();
+});
+
+// Download startup-config
+$(document).on('click', '.action-configdownload', function (e) {
+    logger(1, 'DEBUG: action = configdownload');
+    var id = $(this).attr('data-path');
+    $.when(getNodeConfigs(id)).done(function (config) {
+		var a = document.createElement('a');
+		a.download = config['name'] +".txt";
+		a.href = URL.createObjectURL(new Blob([config['data']] , {type:'application/octet-stream'}));
+		a.click();		
+    }).fail(function (message) {
+        addModalError(message);
+    });
+    $('#context-menu').remove();
+});
+
+// Download All startup-configs
+$(document).on('click', '.action-configdownloadall', function (e) {
+    logger(1, 'DEBUG: action = configdownloadall');
+	$.when(getNodes(null)).done(function (nodes) {
+		var nodeLenght = Object.keys(nodes).length;
+		$.each(nodes, function (key, values) {
+			$.when(getNodeConfigs(key)).done(function (config) {
+				if (config['data'] != ''){
+					var a = document.createElement('a');
+					a.download = config['name'] +".txt";
+					a.href = URL.createObjectURL(new Blob([config['data']] , {type:'application/octet-stream'}));
+					a.click();
+				}						
+			}).fail(function (message) {
+				if (message != "Startup config not available (60058)."){
+					addModalError(message);					
+				}
+
+			});
+		});
+	}).fail(function (message) {
+		addModalError(message);
+	});
+	
+			
     $('#context-menu').remove();
 });
 
@@ -768,6 +817,7 @@ $(document).on('click', '.action-moreactions', function (e) {
     body += '<li><a class="action-nodesstop" href="javascript:void(0)"><i class="glyphicon glyphicon-stop"></i> ' + MESSAGES[127] + '</a></li>';
     body += '<li><a class="action-nodeswipe" href="javascript:void(0)"><i class="glyphicon glyphicon-erase"></i> ' + MESSAGES[128] + '</a></li>';
     if (ROLE == 'admin' || ROLE == 'editor') {
+		body += '<li><a class="action-nodesimport" href="javascript:void(0)"><i class="glyphicon glyphicon-import"></i> ' + MESSAGES[165] + '</a></li>';
         body += '<li><a class="action-nodesexport" href="javascript:void(0)"><i class="glyphicon glyphicon-save"></i> ' + MESSAGES[129] + '</a></li>';
         body += '<li><a class="action-labedit" href="javascript:void(0)"><i class="glyphicon glyphicon-pencil"></i> ' + MESSAGES[87] + '</a></li>';
         body += '<li><a class="action-nodesbootsaved" href="javascript:void(0)"><i class="glyphicon glyphicon-floppy-saved"></i> ' + MESSAGES[139] + '</a></li>';
@@ -1343,6 +1393,15 @@ $(document).on('click', '.action-nodeexport, .action-nodesexport, .action-nodeex
     }).fail(function (message) {
         addModalError(message);
     });
+});
+
+// Import Multiple configs
+$(document).on('click', '.action-nodesimport', function (e) {
+	printFormMassImport();	
+    $('#context-menu').remove();
+
+		
+
 });
 
 // Start a node
@@ -1987,17 +2046,24 @@ $(document).on('submit', '#form-node-add, #form-node-edit', function (e) {
     var lab_filename = $('#lab-viewport').attr('data-path');
     var form_data = form2Array('node');
     var promises = [];
-    if ($(this).attr('id') == 'form-node-add') {
+	var formtype;
+	if ($(this).attr('id') == 'form-node-add') {
         logger(1, 'DEBUG: posting form-node-add form.');
+        formtype = 'form-node-add';
+    } else {
+        logger(1, 'DEBUG: posting form-node-edit form.');
+        formtype = 'form-node-edit';
+    }
+	
+    if (formtype == 'form-node-add') {
         var url = '/api/labs' + lab_filename + '/nodes';
         var type = 'POST';
     } else {
-        logger(1, 'DEBUG: posting form-node-edit form.');
         var url = '/api/labs' + lab_filename + '/nodes/' + form_data['id'];
         var type = 'PUT';
     }
 
-    if ($(this).attr('id') == 'form-node-add') {
+    if (formtype == 'form-node-add') {
         // If adding need to manage multiple add
         if (form_data['count'] > 1) {
             form_data['postfix'] = 1;
@@ -2013,6 +2079,7 @@ $(document).on('submit', '#form-node-add, #form-node-edit', function (e) {
     for (var i = 0; i < form_data['count']; i++) {
         form_data['left'] = parseInt(form_data['left']) + i * 10;
         form_data['top'] = parseInt(form_data['top']) + i * 10;
+		var inputUpload=$('input[name="node[timos_config]"]');
         var request = $.ajax({
             timeout: TIMEOUT,
             type: type,
@@ -2048,6 +2115,95 @@ $(document).on('submit', '#form-node-add, #form-node-edit', function (e) {
                     $("#form-node-edit-table input[name='node[ethernet]'][data-path='" + form_data['id'] + "']").val(form_data["ethernet"])
                     $("#form-node-edit-table select[name='node[console]'][data-path='" + form_data['id'] + "']").val(form_data["console"])
                     $("#form-node-edit-table select[name='node[icon]'][data-path='" + form_data['id'] + "']").val(form_data["icon"])
+
+
+					if (form_data['template'] === 'timos' || form_data['template'] == 'timoscpm' ){
+						if (form_data['timos_config'] != ''){
+							console.log('Timos config will be set to the server');
+
+							if (formtype == 'form-node-add') {
+								var url = '/api/labs' + lab_filename + '/timos_config/'+data['NodeID'];
+							} else {
+								logger(1, 'DEBUG: posting form-node-edit form.');
+								var url = '/api/labs' + lab_filename + '/timos_config/' + form_data['id'];
+							}
+							var ext = form_data["timos_config"].split('.').pop().toLowerCase();
+							if($.inArray(ext, ['txt','cfg','zip']) > -1) {
+								var file_data = inputUpload.prop("files")[0];
+								if(file_data.size<5242880){
+									var type = 'POST';
+									var form_data2 = new FormData();               
+									form_data2.append('file', file_data);
+									var percentComplete = 0
+									addMessage('info', 'Uploading File!');
+									addModal('info', '<p data-percent="data-percent">Uploading File! %'+percentComplete+'</p>', '<button type="button" class="btn btn-aqua" data-dismiss="modal">Close</button>');
+									var request2 = $.ajax({
+										xhr: function(){
+											var xhr = new window.XMLHttpRequest();
+											//Upload progress
+											xhr.upload.addEventListener("progress", function(evt){
+												if (evt.lengthComputable) {
+													var percentComplete = (evt.loaded / evt.total)*100;
+													//Do something with upload progress
+													if (percentComplete<100){
+														$("[data-percent=data-percent]").text('Uploading File!   %'+ String(percentComplete).substring(0, 2));
+													}
+													else {
+														$("[data-percent=data-percent]").text('File Uploaded!');
+														$('div.modal-backdrop').remove();
+														$('body').children('.modal').attr('skipRedraw', true);
+														$('body').children('.modal').modal('hide');
+														$('body').children('.modal.fade.in').focus();														
+													}
+											  }
+											}, false);
+											//Download progress
+											xhr.addEventListener("progress", function(evt){
+												if (evt.lengthComputable) {
+													var percentComplete = (evt.loaded / evt.total)*100;
+													//Do something with download progress
+													if (percentComplete<100){
+														$("[data-percent=data-percent]").text('Uploading File!   %'+ String(percentComplete).substring(0, 2));
+													}
+													else {
+														$("[data-percent=data-percent]").text('File Uploaded!');
+														$('div.modal-backdrop').remove();
+														$('body').children('.modal').attr('skipRedraw', true);
+														$('body').children('.modal').modal('hide');
+														$('body').children('.modal.fade.in').focus();														
+													}
+												}
+											}, false);
+											return xhr;
+										},
+										timeout: TIMEOUT * 3,
+										url: encodeURI(url),
+										type: type,
+										data: form_data2,
+										processData:false,
+										contentType:false,
+										cache: false,
+										success: function (data) {
+											$('div.modal-backdrop').remove();
+											$('body').children('.modal').attr('skipRedraw', true);
+											$('body').children('.modal').modal('hide');
+											addMessage('info', 'Config Uploaded!');								
+										}
+									});
+									promises.push(request2);
+								} else {
+									addModal('ERROR', '<p>' + 'File should be less than 5Mb' + '</p>', '<button type="button" class="btn btn-aqua" data-dismiss="modal">Close</button>','');
+									$('div.modal-backdrop').remove();									
+								}			
+							} else {
+								addModal('ERROR', '<p>' + 'invalid extension! Only txt,cfg and zip accepted' + '</p>', '<button type="button" class="btn btn-aqua" data-dismiss="modal">Close</button>','');
+								$('div.modal-backdrop').remove();
+								$('body').children('.modal').attr('skipRedraw', true);
+								//$('body').children('.modal').modal('hide');
+							}	
+						}
+					}
+					
                 } else {
                     // Application error
                     logger(1, 'DEBUG: application error (' + data['status'] + ') on ' + type + ' ' + url + ' (' + data['message'] + ').');
@@ -2071,6 +2227,120 @@ $(document).on('submit', '#form-node-add, #form-node-edit', function (e) {
         }
     });
     return false;  // Stop to avoid POST
+});
+
+// Submit Mass Import Form
+$(document).on('submit', '#form-node-massimport', function (e) {
+	console.log('clicked massimport');
+    e.preventDefault();  // Prevent default behaviour
+    var lab_filename = $('#lab-viewport').attr('data-path');
+    var promises = [];	
+	var inputUpload=$('input[name="input-massimport"]');
+	var files = inputUpload.prop("files");
+
+	
+	if (inputUpload.val()){	
+		$.when(getNodes(null)).done(function (nodes) {
+			$(files).each(function () {
+				var filename;
+				if ('name' in this) {
+					filename= this.name;
+				}else {
+					filename= this.fileName;
+				}
+				var thisfile = this;
+				var fNodeName = filename.substr(0, filename.lastIndexOf('.')) || filename;
+				var ext = filename.split('.').pop().toLowerCase();
+				$.each(nodes, function (key, value) {
+					if (fNodeName == value.name && $.inArray(value.template, ['timos','timoscpm']) > -1 && $.inArray(ext, ['txt','cfg','zip']) > -1){
+						console.log(value.name + ' found! '  );
+						// Upload File!!!
+						if(thisfile.size<5242880){
+							var url = '/api/labs' + lab_filename + '/timos_config/'+value.id;
+							var type = 'POST';
+							var form_data2 = new FormData();               
+							form_data2.append('file', thisfile);
+							var percentComplete = 0
+							addMessage('info', 'Uploading File!');
+							addModal('info', '<p data-percent="data-percent">Uploading File! %'+percentComplete+'</p>', '<button type="button" class="btn btn-aqua" data-dismiss="modal">Close</button>');
+							var request2 = $.ajax({
+								xhr: function(){
+									var xhr = new window.XMLHttpRequest();
+									//Upload progress
+									xhr.upload.addEventListener("progress", function(evt){
+										if (evt.lengthComputable) {
+											var percentComplete = (evt.loaded / evt.total)*100;
+											//Do something with upload progress
+											if (percentComplete<100){
+												$("[data-percent=data-percent]").text('Uploading File!   %'+ String(percentComplete).substring(0, 2));
+											}
+											else {
+												$("[data-percent=data-percent]").text('File Uploaded!');
+												$('div.modal-backdrop').remove();
+												$('body').children('.modal').attr('skipRedraw', true);
+												$('body').children('.modal').modal('hide');
+												$('body').children('.modal.fade.in').focus();														
+											}
+									  }
+									}, false);
+									//Download progress
+									xhr.addEventListener("progress", function(evt){
+										if (evt.lengthComputable) {
+											var percentComplete = (evt.loaded / evt.total)*100;
+											//Do something with download progress
+											if (percentComplete<100){
+												$("[data-percent=data-percent]").text('Uploading File!   %'+ String(percentComplete).substring(0, 2));
+											}
+											else {
+												$("[data-percent=data-percent]").text('File Uploaded!');
+												$('div.modal-backdrop').remove();
+												$('body').children('.modal').attr('skipRedraw', true);
+												$('body').children('.modal').modal('hide');
+												$('body').children('.modal.fade.in').focus();														
+											}
+										}
+									}, false);
+									return xhr;
+								},
+								timeout: TIMEOUT * 3,
+								url: encodeURI(url),
+								type: type,
+								data: form_data2,
+								processData:false,
+								contentType:false,
+								cache: false,
+								success: function (data) {
+									$('div.modal-backdrop').remove();
+									$('body').children('.modal').attr('skipRedraw', true);
+									$('body').children('.modal').modal('hide');
+									addMessage('info', value.name + ' - Config Uploaded!');								
+								}
+							});
+							promises.push(request2);
+						} else {
+							addMessage('danger', value.name + ' - File should be less than 5Mb!');	
+							$('div.modal-backdrop').remove();									
+						}	
+					}
+				})				
+			});		
+		}).fail(function (message) {
+			addModalError(message);
+		});
+		// Close the modal
+		$('body').children('.modal').attr('skipRedraw', true);
+		$('body').children('.modal.second-win').modal('hide');
+		$('body').children('.modal.fade.in').focus();
+		
+		$.when.apply(null, promises).done(function () {
+			addMessage('info', 'Mass Import Finished!');
+		});
+		return false;  // Stop to avoid POST
+	
+
+
+		
+	}
 });
 
 // submit nodeList form by input focusout

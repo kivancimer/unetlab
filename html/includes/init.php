@@ -44,6 +44,8 @@ if (!isset($node_config)) {
 		'c3725'			=>	'embedded',
 		'c7200'			=>	'embedded',
 		'vpcs'			=>	'embedded',
+		'timos'			=>	'timos.py',
+		'timoscpm'		=>	'timos.py',
 		'asa'			=>	'config_asa.py',
 		'asav'			=>	'config_asav.py',
 		'csr1000v'		=>	'config_csr1000v.py',
@@ -63,9 +65,11 @@ if (!isset($node_config)) {
 
 if (!isset($node_templates)) {
 	$node_templates = Array(
+		'timos'			=>	'Nokia SROS SingleVM',
+		'timoscpm'		=>	'Nokia SROS CPM Template',
+		'timosiom'		=>	'Nokia SROS IOM Template',
 		'a10'			=>	'A10 vThunder',
 		'clearpass'		=>	'Aruba ClearPass',
-		'timos'			=>	'Alcatel 7750 SR',
 		'veos'			=>	'Arista vEOS',
 		'brocadevadx'		=>	'Brocade vADX',
 		'cpsg'			=>	'CheckPoint Security Gateway VE',

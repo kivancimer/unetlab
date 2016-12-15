@@ -257,14 +257,15 @@ function checkUsername($i) {
 	}
 
 	// Now check if the home directory exists
+	$old = umask(0);
 	if (!is_dir($path) && !mkdir($path)) {
 		// Failed to create the home directory
 		error_log(date('M d H:i:s ').'ERROR: '.$GLOBALS['messages'][80010]);
 		return False;
 	}
-
+	umask($old);
 	// Be sure of the setgid bit
-	$cmd = 'chmod 2775 '.$path;
+	$cmd = 'chmod 0777 '.$path;
 	exec($cmd, $o, $rc);
 	if ($rc != 0) {
 		// Failed to set the setgid bit
@@ -512,13 +513,13 @@ function export($node_id, $n, $lab) {
 			// Add no shut
 			if (is_file($tmp)) file_put_contents($tmp,preg_replace('/(\ninterface.*)/','$1'.chr(10).' no shutdown',file_get_contents($tmp)));
 			break;
-		case 'qemu':
+		case 'qemu':			
 			if ($n -> getStatus() < 2 || !isset($GLOBALS['node_config'][$n -> getTemplate()])) {
 				// Skipping powered off nodes or unsupported nodes
 				error_log(date('M d H:i:s ').'WARNING: '.$GLOBALS['messages'][80084]);
 				return 80084;
 			} else {
-				$cmd = '/opt/unetlab/scripts/'.$GLOBALS['node_config'][$n -> getTemplate()].' -a get -p '.$n -> getPort().' -f '.$tmp.' -t 15';
+				$cmd = '/opt/unetlab/scripts/'.$GLOBALS['node_config'][$n -> getTemplate()].' -a get -p '.$n -> getPort().' -f '.$tmp.' -t 120';
 				exec($cmd, $o, $rc);
 				error_log(date('M d H:i:s ').'INFO: exporting '.$cmd);
 				if ($rc != 0) {
@@ -710,17 +711,37 @@ function prepareNode($n, $id, $t, $nets) {
 	}
 
 	// Transition fix: mark the node as prepared (TODO)
-	if (is_dir($n -> getRunningPath())) !touch($n -> getRunningPath().'/.prepared');
+	##Timos_Config --> Delete  /.prepared when uploading config
+	if (in_array($n -> getTemplate(), Array('timos','timoscpm'))){
+		$timosimage = '/opt/unetlab/addons/qemu/'.$n -> getImage();		
+		foreach(scandir($timosimage) as $filename) {
+			if (preg_match('/^[a-zA-Z0-9]+.qcow2$/', $filename)) {
+				if (file_exists($n -> getRunningPath().'/'.$filename) && !file_exists($n -> getRunningPath().'/config.cfg')){					
+					!touch($n -> getRunningPath().'/.prepared');
+				}
+				else {
+					error_log(date('M d H:i:s ').'preperation required ');
+					if (file_exists($n -> getRunningPath().'/.prepared')){
+						unlink($n -> getRunningPath().'/.prepared');
+					}
+				}				
+			}
+		}
+	} else{
+		if (is_dir($n -> getRunningPath())) !touch($n -> getRunningPath().'/.prepared');	
+	}
+	
 
 	if (!is_file($n -> getRunningPath().'/.prepared') && !is_file($n -> getRunningPath().'/.lock')) {
 
-		// Node is not prepared/locked
-		if (!is_dir($n -> getRunningPath()) && !mkdir($n -> getRunningPath(), 0775, True)) {
+		// Node is not prepared/locke
+		$old = umask(0);
+		if (!is_dir($n -> getRunningPath()) && !mkdir($n -> getRunningPath(), 0777, True)) {
 			// Cannot create running directory
 			error_log(date('M d H:i:s ').'ERROR: '.$GLOBALS['messages'][80037]);
 			return 80037;
 		}
-
+		umask($old);
 		switch ($n -> getNType()) {
 			default:
 				// Invalid node_type
@@ -791,6 +812,32 @@ function prepareNode($n, $id, $t, $nets) {
 							error_log(date('M d H:i:s ').implode("\n", $o));
 							return 80045;
 						}
+						### Insert Timos_config into hda.qcow2
+						error_log(date('M d H:i:s ').'Qcow2 Image: '.$n -> getRunningPath().'/'.$filename);
+						error_log(date('M d H:i:s ').'Config: '.$n -> getRunningPath().'/config.cfg');
+						if (file_exists($n -> getRunningPath().'/config.cfg')){					
+							error_log(date('M d H:i:s ').'Config exists for Node '.$id);
+							$cmd1 = 'echo "copy-in '.$n -> getRunningPath().'/config.cfg /" > guestfish_cmds'.$t.'_'.$id;
+							$cmd2 = 'guestfish --rw -a '.$n -> getRunningPath().'/'.$filename.' -m /dev/sda1 < guestfish_cmds'.$t.'_'.$id;
+							exec($cmd1, $o, $rc);
+							error_log(date('M d H:i:s ').'CMD1:');
+							error_log(date('M d H:i:s ').implode("\n", $o));
+							if ($rc == 0) {
+								exec($cmd2, $o, $rc);
+								error_log(date('M d H:i:s ').'CMD2:');
+								error_log(date('M d H:i:s ').implode("\n", $o));
+								if ($rc == 0) {
+									exec('rm -f guestfish_cmds'.$t.'_'.$id,$o, $rc);
+									if (!unlink($n -> getRunningPath().'/config.cfg')) {
+										error_log(date('M d H:i:s ').'ERROR: '.$GLOBALS['messages'][80089]);
+										return 80089;
+									}
+								}
+							
+							}				
+							
+						}
+
 					}
 
 				}
@@ -974,7 +1021,7 @@ function start($n, $id, $t, $nets, $scripttimeout) {
 	error_log(date('M d H:i:s ').'INFO: starting '.$cmd);
 	exec($cmd, $o, $rc);
 
-	if ($rc == 0 && $n -> getNType() == 'qemu' && is_file($n -> getRunningPath().'/startup-config') && !is_file($n -> getRunningPath().'/.configured') && $n -> getConfig() != 0 ) {
+	if ($rc == 0 && $n -> getNType() == 'qemu' && is_file($n -> getRunningPath().'/startup-config') && !is_file($n -> getRunningPath().'/.configured') && $n -> getConfig() != 0 && !in_array($n -> getTemplate(), Array('timos','timoscpm','timosiom'))) {
 		// Start configuration process or check if bootstrap is done
 		touch($n -> getRunningPath().'/.lock');
 		$cmd = 'nohup /opt/unetlab/scripts/config_'.$n -> getTemplate().'.py -a put -p '.$n -> getPort().' -f '.$n -> getRunningPath().'/startup-config -t '.($n -> getDelay() + $scripttimeout).' > /dev/null 2>&1 &';

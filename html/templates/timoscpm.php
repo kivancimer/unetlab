@@ -16,7 +16,7 @@
  */
 
 $p['type'] = 'qemu';
-$p['name'] = '7750SR';
+$p['name'] = '7750SR_CPM';
 $p['icon'] = 'SROS.png';
 if (function_exists('isVirtual') && isVirtual()) {
 	$p['cpu'] = 1;
@@ -24,7 +24,7 @@ if (function_exists('isVirtual') && isVirtual()) {
 	$p['cpu'] = 2;
 }
 $p['ram'] = 2048; 
-$p['ethernet'] = 6; 
+$p['ethernet'] = 2; 
 $p['console'] = 'telnet'; 
 $p['qemu_arch'] = 'x86_64';
 if (function_exists('isVirtual') && isVirtual()) {
@@ -32,5 +32,6 @@ if (function_exists('isVirtual') && isVirtual()) {
 } else {
 	$p['qemu_options'] = '-machine type=pc,accel=kvm';
 }
-$p['qemu_options'] .= ' -enable-kvm -serial mon:stdio -nographic -nodefconfig -nodefaults -rtc base=utc ';
+$p['qemu_options'] .= ' -serial mon:stdio -nographic -nodefconfig -nodefaults -rtc base=utc';
+$p['timos_line'] = 'TIMOS:slot=A chassis=SR-12 card=cpm5'; 
 ?>

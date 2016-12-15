@@ -97,6 +97,7 @@ $messages[20042] = 'Cannot add object to the lab (20042).';
 $messages[20043] = 'Cannot find object in the selected lab (20043).';
 $messages[20044] = 'Cannot edit object in the selected lab (20044).';
 $messages[20045] = 'Attribute ignored, invalid script timeout - set to default value 300 (20045).';
+$messages[20046] = 'Cannot unzip the zipped SROS config file (20046).';
 
 // __network.php (30000-39999)
 $messages[30000] = 'Cannot create network, invalid or missing mandatory parameters (30000).';
@@ -138,6 +139,7 @@ $messages[40024] = 'Cannot configure slot, invalid slot type (40024).';
 $messages[40025] = 'Node has no valid image (40025).';
 $messages[40026] = 'Attribute ignored, invalid node_uuid (40026).';
 $messages[40027] = 'Attribute ignored, invalid node_console (40027).';
+$messages[40028] = 'Node does not exist (40028).';
 
 // __picture.php (50000-50999)
 $messages[50000] = 'Cannot create picture, invalid or missing mandatory parameters (50000).';
@@ -221,6 +223,7 @@ $messages[60059] = 'Failed to update UNetLab (60059).';
 $messages[60060] = 'UNetLab is updated (60060).';
 $messages[60061] = 'Failed to lock the lab (60061).';
 $messages[60062] = 'Successfully listed textobjects (60062).';
+$messages[60063] = 'Lab is locked (60063).';
 
 // Text (70000-79999)
 $messages[70000] = 'Name/prefix';
@@ -245,6 +248,8 @@ $messages[70018] = 'Ethernet portgroups (4 int each)';
 $messages[70019] = 'Exported';
 $messages[70020] = 'None';
 $messages[70021] = 'First Eth MAC Address';
+$messages[70022] = 'QEMU custom options';
+$messages[70023] = 'Timos Line';
 
 // CLI (80000-89999)
 $messages[80009] = 'Failed to add the username (80009).';
@@ -326,6 +331,7 @@ $messages[80085] = 'Failed to set MTU 9000 on interface (80085).';
 $messages[80086] = 'Cannot import iou-web file (80086).';
 $messages[80087] = 'iou-web file imported (80087).';
 $messages[80088] = 'Cannot find vpcs installation (80088).';
+$messages[80089] = 'Cannot delete the node config (80089).';
 
 // Authentication (90000-99999)
 $messages[90001] = 'User is not authenticated or session timed out (90001).';

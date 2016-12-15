@@ -302,6 +302,43 @@ function apiGetLab($lab) {
 }
 
 /*
+ * Function to get a lab State
+ *
+ * @param	Lab			$lab			Lab
+ * @return	Array						Return code (JSend data)
+ */
+function apiGetLabState($lab) {
+	// Printing info
+	$output['code'] = 200;
+	$output['status'] = 'success';
+	$output['message'] = $GLOBALS['messages'][60063];
+	if (file_exists($lab -> getPath().'/'.$lab -> getFilename().'.lock')) {
+		$output['state'] = true;
+	} else {
+		$output['state'] = false;
+	}	
+	return $output;
+}
+
+/*
+ * Function to get a lab State
+ *
+ * @param	Lab			$lab			Lab
+ * @return	Array						Return code (JSend data)
+ */
+function apiUnlockLab($lab) {
+	// Printing info
+	$output['code'] = 200;
+	$output['status'] = 'success';
+	$output['message'] = $GLOBALS['messages'][60063];
+	if (unlink($lab -> getPath().'/'.$lab -> getFilename().'.lock')) {
+		$output['state'] = true;
+	} else {
+		$output['state'] = false;
+	}	
+	return $output;
+}
+/*
  * Function to get all lab links (networks and serial endpoints).
  *
  * @param	Lab			$lab			Lab file
@@ -423,6 +460,7 @@ function apiImportLabs($p) {
 		}
 
 		// Creating import dir if it does not exist
+		$old = umask(0);
 		if (!is_dir($dst) && !mkdir($dst)) {
 			unlink($tmp);
 			$output['code'] = 400;
@@ -432,7 +470,7 @@ function apiImportLabs($p) {
 			error_log(date('M d H:i:s ').(string) $e);
 			return $output;
 		}
-
+		umask($old);
 		// List all iou-web labs
 		try {
 			$query_labs = 'SELECT lab_id, lab_name, lab_description, lab_info, lab_netmap FROM labs;';

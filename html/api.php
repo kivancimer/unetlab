@@ -440,7 +440,6 @@ $app -> get('/api/labs/(:path+)', function($path = array()) use ($app, $db) {
 		$app -> response -> setBody(json_encode($output));
 		return;
 	}
-
 	if (preg_match('/^\/[A-Za-z0-9_+\/\\s-]+\.unl\/html$/', $s)) {
 		$Parsedown = new Parsedown();
 		$output['code'] = 200;
@@ -449,6 +448,8 @@ $app -> get('/api/labs/(:path+)', function($path = array()) use ($app, $db) {
 		$output['data'] = $Parsedown -> text($lab -> getBody());
 		$app -> response -> setStatus($output['code']);
 		$app -> response -> setBody(json_encode($output));
+	} else if (preg_match('/^\/[A-Za-z0-9_+\/\\s-]+\.unl\/state$/', $s)) {
+		$output = apiGetLabState($lab);
 	} else if (preg_match('/^\/[A-Za-z0-9_+\/\\s-]+\.unl\/configs$/', $s)) {
 		$output = apiGetLabConfigs($lab);
 	} else if (preg_match('/^\/[A-Za-z0-9_+\/\\s-]+\.unl\/configs\/[0-9]+$/', $s)) {
@@ -784,7 +785,6 @@ $app -> post('/api/labs/(:path+)', function($path = array()) use ($app, $db) {
 
 	// Reading options from POST/PUT
 	if (isset($event -> postfix) && $event -> postfix == True) $o = True;
-
 	if (!is_file(BASE_LAB.$lab_file)) {
 		// Lab file does not exists
 		$output['code'] = 404;
@@ -795,17 +795,19 @@ $app -> post('/api/labs/(:path+)', function($path = array()) use ($app, $db) {
 		return;
 	}
 
-	// Locking
-	if (!lockFile(BASE_LAB.$lab_file)) {
-		// Failed to lockFile within the time
-		$output['code'] = 400;
-		$output['status'] = 'fail';
-		$output['message'] = $GLOBALS['messages'][60061];
-		$app -> response -> setStatus($output['code']);
-		$app -> response -> setBody(json_encode($output));
-		return;
-	}
 
+	if (!preg_match('/^\/[A-Za-z0-9_+\/\\s-]+\.unl\/Unlock$/', $s)) {
+		// Locking
+		if (!lockFile(BASE_LAB.$lab_file)) {
+			// Failed to lockFile within the time
+			$output['code'] = 400;
+			$output['status'] = 'fail';
+			$output['message'] = $GLOBALS['messages'][60061];
+			$app -> response -> setStatus($output['code']);
+			$app -> response -> setBody(json_encode($output));
+			return;
+		}
+	}
 	try {
 		$lab = new Lab(BASE_LAB.$lab_file, $tenant);
 	} catch(Exception $e) {
@@ -821,12 +823,34 @@ $app -> post('/api/labs/(:path+)', function($path = array()) use ($app, $db) {
 
 	if (preg_match('/^\/[A-Za-z0-9_+\/\\s-]+\.unl\/networks$/', $s)) {
 		$output = apiAddLabNetwork($lab, $p, $o);
+	} else if (preg_match('/^\/[A-Za-z0-9_+\/\\s-]+\.unl\/Unlock$/', $s)) {
+		$output['code'] = 200;
+		$output['status'] = 'success';
+		$output['state'] = true;
 	} else if (preg_match('/^\/[A-Za-z0-9_+\/\\s-]+\.unl\/nodes$/', $s)) {
 		if (isset($p['count'])) {
 			// count cannot be set from API
 			unset($p['count']);
 		}
 		$output = apiAddLabNode($lab, $p, $o);
+	} else if (preg_match('/^\/[A-Za-z0-9_+\/\\s-]+\.unl\/timos_config\//', $s)) {
+		$Nodeid = preg_replace('/^\/[A-Za-z0-9_+\/\\s-]+\.unl\/timos_config\/(\d+)/', '$1', $s);
+		// Cannot use $app -> request() -> getBody()
+		$p = $_POST;
+		if (!empty($_FILES)) {
+			foreach ($_FILES as $file) {
+				if (file_exists($file['tmp_name'])) {
+					$fp = fopen($file['tmp_name'], 'r');
+					$size = filesize($file['tmp_name']);
+					if ($fp !== False) {
+						$finfo = new finfo(FILEINFO_MIME);
+						$p['data'] = fread($fp, $size);
+						$p['type'] = $finfo -> buffer($p['data'], FILEINFO_MIME_TYPE);
+					}
+				}
+			}
+		}		
+		$output = apiAddTimosConfig2Node($lab, $p, $Nodeid); ###
 	} else if (preg_match('/^\/[A-Za-z0-9_+\/\\s-]+\.unl\/textobjects$/', $s)) {
 		$output = apiAddLabTextObject($lab, $p, $o);
 	} else if (preg_match('/^\/[A-Za-z0-9_+\/\\s-]+\.unl\/pictures$/', $s)) {
