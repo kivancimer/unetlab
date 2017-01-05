@@ -214,26 +214,28 @@ class Lab {
                                 }
 				// Nokia Distributed Mode needs QEMU Options
                                 if ( $n['template']  == "timoscpm" ) {
-                                        if (isset($node -> attributes() -> timos_line)) {  #TimosLine
-                                                $n['timos_line'] = (string) $node -> attributes() -> timos_line;
-                                                $n['qemu_options'] = ' -machine type=pc,accel=kvm -enable-kvm -serial mon:stdio -nographic -nodefconfig -nodefaults -rtc base=utc';	
-												$n['qemu_options'] .= ' -smbios type=1,product=\"'.$node -> attributes() -> timos_line.'\"'; 
-                                        } else {
-                                                $n['timos_line'] = "TIMOS:slot=A chassis=SR-12 card=cpm5";
-                                                $n['qemu_options'] = ' -machine type=pc,accel=kvm -enable-kvm -serial mon:stdio -nographic -nodefconfig -nodefaults -rtc base=utc';	
-												$n['qemu_options'] .= ' -smbios type=1,product=\"TIMOS:slot=A chassis=SR-12 card=cpm5\"'; 
-                                        }									
+									if (isset($node -> attributes() -> timos_line)) {  #TimosLine
+											$n['timos_line'] = (string) $node -> attributes() -> timos_line;
+									} else {
+											$n['timos_line'] = "TIMOS:slot=A chassis=SR-12 card=cpm5";
+									}
+									if (isset($node -> attributes() -> qemu_options)) {  #TimosLine
+											$n['qemu_options'] = (string) $node -> attributes() -> qemu_options;                                                
+									} else {
+											$n['qemu_options'] = ' -machine type=pc,accel=kvm -enable-kvm -serial mon:stdio -nographic -nodefconfig -nodefaults -rtc base=utc';	
+									}										
                                 }
                                 if ( $n['template']  == "timosiom" ) {
-                                        if (isset($node -> attributes() -> timos_line)) {  #TimosLine
-                                                $n['timos_line'] = (string) $node -> attributes() -> timos_line;
-                                                $n['qemu_options'] = ' -machine type=pc,accel=kvm -enable-kvm -serial mon:stdio -nographic -nodefconfig -nodefaults -rtc base=utc';	
-												$n['qemu_options'] .= ' -smbios type=1,product=\"'.$node -> attributes() -> timos_line.'\"';												
-                                        } else {
-                                                $n['timos_line'] = "TIMOS:slot=1 chassis=SR-12 card=iom3-xp-b mda/1=m10-1gb-sfp-b mda/2=isa-bb";
-                                                $n['qemu_options'] = ' -machine type=pc,accel=kvm -enable-kvm -serial mon:stdio -nographic -nodefconfig -nodefaults -rtc base=utc';	
-												$n['qemu_options'] .= ' -smbios type=1,product=\"TIMOS:slot=1 chassis=SR-12 card=iom3-xp-b mda/1=m10-1gb-sfp-b mda/2=isa-bb\"'; 											
-                                        }									
+									if (isset($node -> attributes() -> timos_line)) {  #TimosLine
+											$n['timos_line'] = (string) $node -> attributes() -> timos_line;
+									} else {
+											$n['timos_line'] = "TIMOS:slot=1 chassis=SR-12 card=iom3-xp-b mda/1=m10-1gb-sfp-b mda/2=isa-bb";
+									}
+									if (isset($node -> attributes() -> qemu_options)) {  #TimosLine
+											$n['qemu_options'] = (string) $node -> attributes() -> qemu_options;                                                
+									} else {
+											$n['qemu_options'] = ' -machine type=pc,accel=kvm -enable-kvm -serial mon:stdio -nographic -nodefconfig -nodefaults -rtc base=utc';	
+									}						
                                 }
 
 				try {

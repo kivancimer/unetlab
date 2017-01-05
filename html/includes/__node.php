@@ -371,8 +371,11 @@ class Node {
 				} else {
 					$this -> timos_config = NULL;
 				}
-				$this -> qemu_options =  ' -machine type=pc,accel=kvm -enable-kvm -serial mon:stdio -nographic -nodefconfig -nodefaults -rtc base=utc';					
-				$this -> qemu_options .= ' -smbios type=1,product=\"'.$this -> timos_line.'\"'; 
+				if (isset($p['qemu_options'])) {
+					$this -> qemu_options = (string) $p['qemu_options'];
+				} else {
+					$this -> qemu_options =  ' -machine type=pc,accel=kvm -enable-kvm -serial mon:stdio -nographic -nodefconfig -nodefaults -rtc base=utc';					
+				}
 			}
 			if ( $p['template']  == 'timosiom' ) {
 				#TimosLine
@@ -382,13 +385,16 @@ class Node {
 					$this -> timos_slot = (string) $output_array[1];
 					preg_match("/chassis=\s*([\S]+)/", $p['timos_line'] , $output_array);
 					$this -> timos_chassis = (string) $output_array[1];
-					} else {
+				} else {
 					$this -> timos_line = 'TIMOS:slot=1 chassis=SR-12 card=iom3-xp-b mda/1=m10-1gb-sfp-b mda/2=isa-bb';
 					$this -> timos_slot = '1';
 					$this -> timos_chassis = 'SR-12';
-					}
-				$this -> qemu_options =  ' -machine type=pc,accel=kvm -enable-kvm -serial mon:stdio -nographic -nodefconfig -nodefaults -rtc base=utc';					
-				$this -> qemu_options .= ' -smbios type=1,product=\"'.$this -> timos_line.'\"'; 
+				}
+				if (isset($p['qemu_options'])) {
+					$this -> qemu_options = (string) $p['qemu_options'];
+				} else {
+					$this -> qemu_options =  ' -machine type=pc,accel=kvm -enable-kvm -serial mon:stdio -nographic -nodefconfig -nodefaults -rtc base=utc';					
+				}
 			}
 		}
 
@@ -691,9 +697,7 @@ class Node {
 				$this -> timos_slot = (string) $output_array[1];
 				preg_match("/chassis=\s*([\S]+)/", $p['timos_line'] , $output_array);
 				$this -> timos_chassis = (string) $output_array[1];
-                $this -> qemu_options = ' -machine type=pc,accel=kvm -enable-kvm -serial mon:stdio -nographic -nodefconfig -nodefaults -rtc base=utc';	
-				$this -> qemu_options .= ' -smbios type=1,product=\"'.$p['timos_line'].'\"'; 
-				}
+			}
 			if (isset($p['timos_config'])) {
 				$this -> timos_config = (string) $p['timos_config'];
 				}				
@@ -920,16 +924,22 @@ class Node {
 
 			// Adding custom flags
 			#TimosLine
-			if (isset($p['timos_line'])) {
-				$flags .=  ' -machine type=pc,accel=kvm -enable-kvm -serial mon:stdio -nographic -nodefconfig -nodefaults -rtc base=utc';					
+			if (isset($this -> timos_line) && isset($this -> qemu_options)) {
+				$flags .= ' '.$this -> qemu_options;					
 				$flags .= ' -smbios type=1,product=\"'.$this -> timos_line.'\"';
-			} else if (isset($p['qemu_options'])) {
+			} else if ($this -> qemu_options) {
 				// Setting additional QEMU options
-				$flags .= ' '.$p['qemu_options'];
+				$flags .= ' '.$this -> qemu_options;
+			} else if (isset($p['qemu_options']) && isset($p['timos_line'])) {
+				$flags .= ' '.$p['qemu_options'];					
+				$flags .= ' -smbios type=1,product=\"'.$p['timos_line'].'\"';
 			} else if (isset($p['qemu_options'])) {
 				// Invalid QEMU options
+				$flags .= ' '.$p['qemu_options'];
+			} else {
 				error_log(date('M d H:i:s ').'ERROR: '.$GLOBALS['messages'][80018]);
 				return Array(False, False);
+				
 			}
 		}
 
